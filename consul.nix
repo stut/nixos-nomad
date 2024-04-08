@@ -14,7 +14,7 @@
       advertise_addr = "192.168.192.131";
       bootstrap_expect = 1;
 
-      datacenter = "riverside";
+      datacenter = "your-datacentre";
 
       #encrypt = "";
       #ca_file = "";
