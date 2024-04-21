@@ -112,6 +112,7 @@ change the shell you may need to modify `apply.sh`.
 These are in no particular order, and none are necessary to get a working
 system.
 
+- [ ] Add a basic `configuration.nix` to be used when installing NixOS
 - [ ] Add a default set of infra jobs to run on the cluster (e.g. Prometheus,
       Grafana, Traefik, etc.)
 - [ ] Add a systemd timer to pull and apply the configuration automatically
