@@ -1,41 +1,23 @@
-{ lib, pkgs, ... }:
+{ lib, pkgs, clusterConfig, ... }:
 {
+  nixpkgs.config.allowUnfree = true;
+
   services.nomad = {
     enable = true;
     package = pkgs.nomad;
 
-    # Add Docker driver.
-    enableDocker = true;
-    # Add extra plugins to Nomads plugin directory.
-    extraSettingsPlugins = [ ];
-
-    # Nomad as Root to access Docker sockets.
-    dropPrivileges = false;
-
     # Nomad configuration, as Nix attribute set.
     settings = {
       bind_addr = "0.0.0.0";
-      datacenter = "your-datacentre";
-      
-      client = {
-        enabled = true;
-      };
+      datacenter = clusterConfig.datacenterName;
       
       server = {
         enabled = true;
         bootstrap_expect = 1;
       };
-      
-      plugin = {
-        raw_exec = {
-	  enable = true;
-	};
 
-	docker = {
-          config = {
-	    allow_privileged = true;
-	  };
-	};
+      client = {
+        enabled = false;
       };
       
       consul = {
@@ -48,15 +30,17 @@
     };
   };
 
-  virtualisation = {
-    docker.enable = true;
-  };
-
   networking.firewall.allowedTCPPorts = [ 4646 4647 4648  ];
   networking.firewall.allowedUDPPorts = [ 4648 ];
 
   environment.systemPackages = with pkgs; [
     damon
   ];
+  
+  systemd.services.nomad = {
+    after = [ "network.target" ];
+    serviceConfig = {
+      Restart = lib.mkForce "always";
+    };
+  };
 }
-
