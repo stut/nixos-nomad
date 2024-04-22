@@ -96,14 +96,17 @@ considered ephemeral, but you should set passwords for both users on the
 server. If you don't you won't be able to log into the machine on its console
 in the case of network issues.
 
+Users in the `wheel` group, i.e. `admin`, can `sudo` without a password. If
+you change this you'll need to add a password to the config.
+
 ### Firewalls
 
 Firewalls are disabled on all nodes by default.
 
 ### SSH
 
-In theory the only reason to access any of the nodes via SSH is to pull and
-apply changes to the configuration. The shell is `bash` and `vim` is installed
+In theory, the only reason to access any of the nodes via SSH is to pull and
+apply changes to the configuration. The shell is `bash`, and `vim` is installed
 by default. These can be changed in `node-types/common/default.nix`. If you
 change the shell you may need to modify `apply.sh`.
 
@@ -127,5 +130,5 @@ own risk. If you do use it, you agree to hold me harmless for any damage it
 causes. You should also be aware that the software it installs is licensed
 under various licenses, and you are responsible for complying with those.
 
-If you improve it, or have any requests/suggestions, please feel free to open
+If you improve it or have any requests/suggestions, please feel free to open
 an issue or PR.
