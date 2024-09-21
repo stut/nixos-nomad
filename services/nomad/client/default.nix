@@ -33,6 +33,9 @@
           force              = false;
           ignore_system_jobs = false;
         };
+				artifact = {
+          disable_filesystem_isolation = true;
+        };
       };
       
       plugin = {
