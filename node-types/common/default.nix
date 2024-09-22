@@ -61,7 +61,12 @@
   networking = {
     enableIPv6 = false;
     # Disable the firewall for the moment
-    firewall.enable = false;
+    firewall = {
+			enable = false;
+			allowedTCPPorts = [ 22 80 443 ];
+			allowedUDPPorts = [ 53 ];
+		};
+    nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" ];
     # Set the hostname using DHCP
     hostName = "";
   };

@@ -11,6 +11,10 @@
       retry_join = [clusterConfig.serverIp];
       leave_on_terminate = true;
       bind_addr = "{{ GetPrivateIP }}";
+      ports = {
+        dns = 8600;
+      };
+      recursors = [ "1.1.1.1" "1.0.0.1" ];
     };
   };
 

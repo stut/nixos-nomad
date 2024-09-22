@@ -31,7 +31,10 @@
 
       ports = {
         grpc = 8502;
+				dns = 8600;
       };
+
+      recursors = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" ];
 
       acl = {
         enabled = false;
