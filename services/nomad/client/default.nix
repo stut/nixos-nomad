@@ -16,7 +16,10 @@
 
     # Nomad configuration, as Nix attribute set.
     settings = {
-      bind_addr = "{{ GetPrivateIP }}";
+      bind_addr = "0.0.0.0";
+      advertise = {
+        http = "{{ GetPrivateInterfaces | include \"network\" \"192.168.192.0/24\" | attr \"address\" }}";
+      };
       datacenter = clusterConfig.datacenterName;
       leave_on_interrupt = true;
       leave_on_terminate = true;
