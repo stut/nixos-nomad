@@ -12,6 +12,7 @@
       leave_on_terminate = true;
       bind_addr = "{{ GetPrivateInterfaces | include \"network\" \"192.168.192.0/24\" | attr \"address\" }}";
       ports = {
+        grpc = 8502;
         dns = 8600;
       };
       recursors = [ "1.1.1.1" "1.0.0.1" ];

@@ -6,6 +6,10 @@
     enable = true;
     package = pkgs.nomad;
 
+    extraPackages = with pkgs; [
+      cni-plugins
+    ];
+
     # Nomad configuration, as Nix attribute set.
     settings = {
       bind_addr = "0.0.0.0";
@@ -19,6 +23,7 @@
 
       client = {
         enabled = false;
+        cni_path = "${pkgs.cni-plugins}/bin";
       };
       
       consul = {

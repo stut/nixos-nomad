@@ -6,6 +6,10 @@
     enable = true;
     package = pkgs.nomad;
 
+    extraPackages = with pkgs; [
+      cni-plugins
+    ];
+
     # Add Docker driver.
     enableDocker = true;
     # Add extra plugins to Nomads plugin directory.
@@ -36,6 +40,7 @@
           force              = false;
           ignore_system_jobs = false;
         };
+        cni_path = "${pkgs.cni-plugins}/bin";
 				artifact = {
           disable_filesystem_isolation = true;
         };
