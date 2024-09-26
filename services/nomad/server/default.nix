@@ -14,6 +14,7 @@
       server = {
         enabled = true;
         bootstrap_expect = 1;
+				encrypt = "Q8kjhnRbGlCYhKJQcAbJwLBcfESabQ6zs+qUjqpUUy4=";
       };
 
       client = {
@@ -27,6 +28,14 @@
       acl = {
         enabled = false;
       };
+
+			telemetry = {
+				collection_interval = "1s";
+				disable_hostname = true;
+				prometheus_metrics = true;
+				publish_allocation_metrics = true;
+				publish_node_metrics = true;
+			};
     };
   };
 

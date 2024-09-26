@@ -17,12 +17,9 @@
       datacenter = clusterConfig.datacenterName;
       node_name = "server01";
 
-      #encrypt = "";
-      #ca_file = "";
-      #cert_file = "";
-      #key_file = "";
-      #verify_incoming = true;
-      #verify_outgoing = true;
+      encrypt = "CJ0ncDhP92euWlWX5EGv2KqBfSkQzEYjXCKTy+VWk3s=";
+      verify_incoming = true;
+      verify_outgoing = true;
       #verify_server_hostname = true;
 
       connect = {
@@ -35,10 +32,6 @@
       };
 
       recursors = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" ];
-
-      acl = {
-        enabled = false;
-      };
     };
   };
 
