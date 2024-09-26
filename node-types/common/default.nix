@@ -46,7 +46,7 @@
         PasswordAuthentication = false;
         ChallengeResponseAuthentication = "no";
         X11Forwarding = false;
-        PrintMotd = "no";
+        PrintMotd = false;
       };
     };
   };
@@ -102,5 +102,5 @@
     };
   };
 
-  system.stateVersion = "23.11";
+  system.stateVersion = "24.05";
 }
