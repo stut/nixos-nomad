@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
+		consul-cni-flake.url = "github:stut/consul-cni.nix";
   };
 
-  outputs = { self, nixpkgs, ... } @ inputs:
+  outputs = { self, nixpkgs, consul-cni-flake, ... } @ inputs:
     let
       # Configure your cluster here
       clusterConfig = {
@@ -28,21 +29,22 @@
         inherit system;
         config.allowUnfree = true;
       });
+			consul-cni = consul-cni-flake.packages.x86_64-linux.consul-cni;
     in
     {
       inherit lib;
       nixosConfigurations = {
         hybrid = lib.nixosSystem {
           modules = [ ./node-types/server ./node-types/client ];
-          specialArgs = { inherit inputs outputs clusterConfig; };
+          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
         server = lib.nixosSystem {
           modules = [ ./node-types/server ];
-          specialArgs = { inherit inputs outputs clusterConfig; };
+          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
         client = lib.nixosSystem {
           modules = [ ./node-types/client ];
-          specialArgs = { inherit inputs outputs clusterConfig; };
+          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
       };
     };
