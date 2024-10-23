@@ -15,7 +15,7 @@
         grpc = 8502;
         dns = 8600;
       };
-      recursors = [ "1.1.1.1" "1.0.0.1" ];
+      recursors = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" ];
 			encrypt = "CJ0ncDhP92euWlWX5EGv2KqBfSkQzEYjXCKTy+VWk3s=";
 			#verify_incoming = true;
 			#verify_outgoing = true;

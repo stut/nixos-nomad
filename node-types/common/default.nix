@@ -62,11 +62,21 @@
     enableIPv6 = false;
     # Disable the firewall for the moment
     firewall = {
-			enable = false;
-			allowedTCPPorts = [ 22 80 443 ];
+			enable = true;
+			# Enabling port 53 for my home lab only; should probably be closed for publicly exposed servers!
+			allowedTCPPorts = [ 22 53 80 443 64242 ];
 			allowedUDPPorts = [ 53 ];
+			# Consul does not run as root, but we want it to respond to DNS requests on port 53, so we'll forward it
+			# to a higher port
+			extraCommands = ''
+				iptables -t nat -A PREROUTING -p udp -m udp --dport 53 -j REDIRECT --to-ports 8600
+				iptables -t nat -A PREROUTING -p tcp -m tcp --dport 53 -j REDIRECT --to-ports 8600
+				iptables -t nat -A OUTPUT -d localhost -p udp -m udp --dport 53 -j REDIRECT --to-ports 8600
+				iptables -t nat -A OUTPUT -d localhost -p tcp -m tcp --dport 53 -j REDIRECT --to-ports 8600
+			'';
 		};
-    nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" ];
+		# Use consul for DNS resolution
+    nameservers = [ "127.0.0.1" ];
     # Set the hostname using DHCP
     hostName = "";
   };
@@ -81,6 +91,7 @@
 
   environment.systemPackages = with pkgs; [
     curl
+		dig
     git
     htop
     vim
