@@ -76,7 +76,7 @@
 			'';
 		};
 		# Use consul for DNS resolution
-    nameservers = [ "127.0.0.1" ];
+    nameservers = [ "127.0.0.1" "1.1.1.1" "1.0.0.1" ];
     # Set the hostname using DHCP
     hostName = "";
   };

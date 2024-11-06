@@ -61,6 +61,15 @@
 			
 			consul = {
 				address = "127.0.0.1:8500";
+				grpc_address = "127.0.0.1:8502";
+
+				server_service_name = "nomad-server";
+				client_service_name = "nomad-client";
+
+				auto_advertise = true;
+
+				server_auto_join = true;
+				client_auto_join = true;
 			};
 
 			acl = {
