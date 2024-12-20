@@ -24,6 +24,8 @@
 			bind_addr = "0.0.0.0";
 			advertise = {
 				http = "{{ GetPrivateInterfaces | include \"network\" \"192.168.192.0/24\" | attr \"address\" }}";
+				rpc = "{{ GetPrivateInterfaces | include \"network\" \"192.168.192.0/24\" | attr \"address\" }}";
+				serf = "{{ GetPrivateInterfaces | include \"network\" \"192.168.192.0/24\" | attr \"address\" }}";
 			};
 			datacenter = clusterConfig.datacenterName;
 			leave_on_interrupt = true;
@@ -49,7 +51,9 @@
 			
 			plugin = {
 				raw_exec = {
-					enable = true;
+					config = {
+					  enabled = true;
+					};
 				};
 
 				docker = {
@@ -84,7 +88,7 @@
 		};
 	};
 
-	networking.firewall.allowedTCPPorts = [ 4646 4647 4648  ];
+	networking.firewall.allowedTCPPorts = [ 4646 4647 4648 9998 ];
 	networking.firewall.allowedUDPPorts = [ 4648 ];
 	
 	systemd.services.nomad = {
