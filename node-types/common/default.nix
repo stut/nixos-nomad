@@ -18,13 +18,13 @@
       ];
       flake-registry = "";
     };
-  
+
     nixPath = [ "nixpkgs=${inputs.nixpkgs.outPath}" ];
 
     registry = lib.mapAttrs (_: value: {
       flake = value;
     }) inputs;
-  
+
     gc = {
       automatic = true;
       dates = "weekly";
@@ -50,14 +50,14 @@
       };
     };
   };
-  
+
   security.sudo = {
     execWheelOnly = true;
     wheelNeedsPassword = false;
   };
 
   hardware.enableRedistributableFirmware = true;
-  
+
   networking = {
     enableIPv6 = false;
     # Disable the firewall for the moment
@@ -66,7 +66,7 @@
 			allowedTCPPorts = [ 22 80 443 64242 ];
 			allowedUDPPorts = [ 53 ];
 		};
-		# Use consul for DNS resolution
+		# TODO: Use consul for DNS resolution
     nameservers = [ "1.1.1.1" "1.0.0.1" ];
     # Set the hostname using DHCP
     hostName = "";
@@ -77,6 +77,12 @@
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
       timeout = 3;
+    };
+    kernel.sysctl = {
+      "net.core.rmem_max" = 2500000;
+      "net.core.rmem_default" = 2500000;
+      "net.core.wmem_max" = 2500000;
+      "net.core.wmem_default" = 2500000;
     };
   };
 
