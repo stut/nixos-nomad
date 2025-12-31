@@ -2,7 +2,7 @@
   description = "Consul / Nomad cluster, Home Lab Edition";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-25.11";
 		consul-cni-flake.url = "github:stut/consul-cni.nix";
   };
 
