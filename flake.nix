@@ -15,6 +15,7 @@
         sshPort = 64242;
         sshPublicKeys = [
           "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCQ3SV7ef3vQs2C6O3S/Yj88teBWmbGXYNoDmU7+tpyK32Phi4OZjceIZXXoA3+3jhksQCycKLOJtmuLCUw8Q0E="
+					"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCCHpc5UQlOrcYoqytTzKF4KXjtii322xUCetC/y/yte08P/qh7hMj/A6g/keXClSmYzo/LWEILDpu8F0QOmLC6GV07jre/ELEZSTakqHVrI9Uw2iyaz80z1yqljKZqD4hlGTL4lbmAkpZJCN7W9RSjedI084L7LOoIAoISr6SfOmkGr2dB3vaB2p3Krc/guEMogWYxfmbItMgyQpBaM/ubMPHBDA+RHqqXr3DK9YLq3JZtFN/5wjzokC2aC1mYaoRV35kkG1hFZoZk2PeJUGpXIJxfWheAuCOcM9bKlImJ8UGbn/6DXtpGDIpjuHh1cePhdsi5mnl8rKGbbC4B/Zf"
         ];
       };
       # End configuration
