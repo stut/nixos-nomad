@@ -66,22 +66,21 @@
 			allowedTCPPorts = [ 22 80 443 64242 ];
 			allowedUDPPorts = [ 53 ];
 		};
-		# TODO: Use consul for DNS resolution
     nameservers = [ "127.0.0.1" ];
-    # Set the hostname using DHCP
     hostName = "";
   };
 
   services.dnsmasq = {
     enable = true;
+		alwaysKeepRunning = true;
     settings = {
-      # Forward *.consul to the local Consul agent on port 8600
       server = [
         "/consul/127.0.0.1#8600"
         "1.1.1.1"
         "1.0.0.1"
+				"8.8.8.8"
       ];
-      listen-address = [ "127.0.0.1" ];
+      bind-interfaces = false;
       no-resolv = true;
       no-hosts = true;
     };
