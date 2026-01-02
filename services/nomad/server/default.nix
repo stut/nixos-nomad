@@ -57,10 +57,30 @@
 	networking.firewall.allowedUDPPorts = [ 4648 ];
 
 	systemd.services.nomad = {
-		after = [ "network.target" ];
+		after = [ "network.target" "generate-server-node-name.service" ];
+		requires = [ "generate-server-node-name.service" ];
 		serviceConfig = {
 			Restart = lib.mkForce "always";
 		};
+		preStart = ''
+			# Ensure node name file exists (should be created by generate-server-node-name.service)
+			if [ ! -f /var/lib/nomad-consul-server-node-name ]; then
+				echo "Error: Node name file not found. generate-server-node-name.service may have failed." >&2
+				exit 1
+			fi
+			# Read node name and create Nomad config file with node name
+			NODE_NAME=$(cat /var/lib/nomad-consul-server-node-name)
+			if [ -z "$NODE_NAME" ]; then
+				echo "Error: Node name file is empty" >&2
+				exit 1
+			fi
+			# Create Nomad config snippet with node name
+			# Nomad reads all .hcl files in the config directory
+			mkdir -p /etc/nomad.d
+			cat > /etc/nomad.d/node-name.hcl <<EOF
+name = "$NODE_NAME"
+EOF
+		'';
 	};
 }
 

@@ -1,4 +1,32 @@
 { lib, pkgs, clusterConfig, ... }:
+let
+  generateNodeName = pkgs.writeShellScript "generate-server-node-name" ''
+    #!/usr/bin/env bash
+    MACHINE_ID_FILE="/etc/machine-id"
+    NODE_NAME_FILE="/var/lib/nomad-consul-server-node-name"
+    
+    if [ ! -f "$MACHINE_ID_FILE" ]; then
+      echo "Error: $MACHINE_ID_FILE not found" >&2
+      exit 1
+    fi
+    
+    # Read machine-id and take first 8 characters
+    MACHINE_ID=$(cat "$MACHINE_ID_FILE" | tr -d '\n' | head -c 8)
+    NODE_NAME="server-''${MACHINE_ID}"
+    HOSTNAME="''${NODE_NAME}.l51.net"
+    
+    # Write to file for other services to read
+    mkdir -p "$(dirname "$NODE_NAME_FILE")"
+    echo "$NODE_NAME" > "$NODE_NAME_FILE"
+    
+    # Set system hostname by writing to /etc/hostname (systemd will pick it up)
+    echo "$HOSTNAME" > /etc/hostname
+    # Also set it immediately using hostname command (doesn't require D-Bus)
+    hostname "$HOSTNAME" 2>/dev/null || true
+    
+    echo "$NODE_NAME"
+  '';
+in
 {
   services.consul = {
     enable = true;
@@ -15,7 +43,6 @@
       bootstrap_expect = 1;
 
       datacenter = clusterConfig.datacenterName;
-      node_name = "server01";
 
       encrypt = "CJ0ncDhP92euWlWX5EGv2KqBfSkQzEYjXCKTy+VWk3s=";
       #verify_incoming = true;
@@ -39,9 +66,33 @@
   networking.firewall.allowedUDPPorts = [ 8600 8300 8301 8302 ];
 
   systemd.services.consul = {
-    after = [ "network.target" ];
+    after = [ "network.target" "generate-server-node-name.service" ];
+    requires = [ "generate-server-node-name.service" ];
     serviceConfig = {
       Restart = lib.mkForce "always";
+    };
+    preStart = ''
+      # Ensure node name file exists
+      if [ ! -f /var/lib/nomad-consul-server-node-name ]; then
+        ${generateNodeName}
+      fi
+      # Create Consul config file with node_name
+      NODE_NAME=$(cat /var/lib/nomad-consul-server-node-name)
+      mkdir -p /etc/consul.d
+      echo "{\"node_name\": \"$NODE_NAME\"}" > /etc/consul.d/node-name.json
+    '';
+  };
+
+  # Service to generate node name from machine-id
+  systemd.services.generate-server-node-name = {
+    description = "Generate unique server node name from machine-id";
+    wantedBy = [ "multi-user.target" "consul.service" "nomad.service" ];
+    before = [ "consul.service" "nomad.service" ];
+    after = [ "systemd-hostnamed.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${generateNodeName}";
     };
   };
 }
