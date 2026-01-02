@@ -56,11 +56,20 @@
 	networking.firewall.allowedTCPPorts = [ 4646 4647 4648  ];
 	networking.firewall.allowedUDPPorts = [ 4648 ];
 
+	# Ensure /var/lib/nomad/config.d exists and is writable
+	# Create it with 1777 permissions (sticky bit + world writable) so any user can write
+	systemd.tmpfiles.rules = [
+		"d /var/lib/nomad 0755 root root -"
+		"d /var/lib/nomad/config.d 1777 root root -"
+	];
+
 	systemd.services.nomad = {
-		after = [ "network.target" "generate-server-node-name.service" ];
+		after = [ "network.target" "generate-server-node-name.service" "systemd-tmpfiles-setup.service" ];
 		requires = [ "generate-server-node-name.service" ];
 		serviceConfig = {
 			Restart = lib.mkForce "always";
+			# Allow writing to /var/lib/nomad for config files
+			ReadWritePaths = [ "/var/lib/nomad" ];
 		};
 		preStart = ''
 			# Ensure node name file exists (should be created by generate-server-node-name.service)
@@ -75,9 +84,9 @@
 				exit 1
 			fi
 			# Create Nomad config snippet with node name
-			# Nomad reads all .hcl files in the config directory
-			mkdir -p /etc/nomad.d
-			cat > /etc/nomad.d/node-name.hcl <<EOF
+			# Directory is created with 1777 permissions so any user can write
+			mkdir -p /var/lib/nomad/config.d
+			cat > /var/lib/nomad/config.d/node-name.hcl <<EOF
 name = "$NODE_NAME"
 EOF
 		'';
