@@ -94,6 +94,41 @@ EOF
 		'';
 	};
 
+	# Service to configure Nomad scheduler algorithm to spread
+	systemd.services.configure-nomad-scheduler = {
+		description = "Configure Nomad scheduler algorithm to spread";
+		after = [ "network.target" "nomad.service" ];
+		wants = [ "nomad.service" ];
+		wantedBy = [ "multi-user.target" ];
+		path = with pkgs; [ curl jq ];
+		serviceConfig = {
+			Type = "oneshot";
+			RemainAfterExit = true;
+		};
+		script = ''
+			# Wait for Nomad to be ready
+			for i in {1..30}; do
+				if curl -s -f http://127.0.0.1:4646/v1/status/leader > /dev/null 2>&1; then
+					break
+				fi
+				sleep 1
+			done
+			
+			# Check current scheduler configuration
+			CURRENT_ALG=$(curl -s http://127.0.0.1:4646/v1/operator/scheduler/configuration | jq -r '.SchedulerAlgorithm // empty')
+			
+			# Only update if not already set to spread
+			if [ "$CURRENT_ALG" != "spread" ]; then
+				# Configure scheduler algorithm to spread
+				curl -X POST http://127.0.0.1:4646/v1/operator/scheduler/configuration \
+					-H "Content-Type: application/json" \
+					-d '{
+						"SchedulerAlgorithm": "spread"
+					}' || echo "Warning: Failed to set scheduler algorithm to spread" >&2
+			fi
+		'';
+	};
+
 	# Separate service to register Nomad metrics in Consul (runs as root)
 	systemd.services.register-nomad-metrics = {
 		description = "Register Nomad metrics service in Consul for Prometheus discovery";
