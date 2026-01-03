@@ -18,7 +18,6 @@
 			server = {
 				enabled = true;
 				bootstrap_expect = 1;
-				encrypt = "Q8kjhnRbGlCYhKJQcAbJwLBcfESabQ6zs+qUjqpUUy4=";
 			};
 
 			client = {
@@ -58,13 +57,16 @@
 
 	# Ensure /var/lib/nomad/config.d exists and is writable
 	# Create it with 1777 permissions (sticky bit + world writable) so any user can write
+	# Also ensure /etc/consul.d exists for service registration
 	systemd.tmpfiles.rules = [
 		"d /var/lib/nomad 0755 root root -"
 		"d /var/lib/nomad/config.d 1777 root root -"
+		"d /etc/consul.d 0755 root root -"
 	];
 
 	systemd.services.nomad = {
-		after = [ "network.target" "generate-server-node-name.service" "systemd-tmpfiles-setup.service" ];
+		after = [ "network.target" "generate-server-node-name.service" "systemd-tmpfiles-setup.service" "consul.service" ];
+		wants = [ "consul.service" ];
 		requires = [ "generate-server-node-name.service" ];
 		serviceConfig = {
 			Restart = lib.mkForce "always";
@@ -89,6 +91,55 @@
 			cat > /var/lib/nomad/config.d/node-name.hcl <<EOF
 name = "$NODE_NAME"
 EOF
+		'';
+	};
+
+	# Separate service to register Nomad metrics in Consul (runs as root)
+	systemd.services.register-nomad-metrics = {
+		description = "Register Nomad metrics service in Consul for Prometheus discovery";
+		after = [ "network.target" "consul.service" "nomad.service" ];
+		wants = [ "consul.service" "nomad.service" ];
+		path = with pkgs; [ curl consul ];
+		serviceConfig = {
+			Type = "oneshot";
+			RemainAfterExit = true;
+		};
+		script = ''
+			# Wait for Nomad to be ready
+			for i in {1..30}; do
+				if curl -s -f http://127.0.0.1:4646/v1/metrics > /dev/null 2>&1; then
+					break
+				fi
+				sleep 1
+			done
+			
+			# Register Nomad metrics service in Consul
+			# Use explicit IP address so Prometheus can scrape without DNS resolution
+			cat > /etc/consul.d/nomad-metrics.json <<EOFCONSUL
+{
+  "service": {
+    "name": "nomad-metrics",
+    "tags": ["prometheus", "metrics", "nomad-server"],
+    "address": "${clusterConfig.serverIp}",
+    "port": 4646,
+    "meta": {
+      "prometheus_path": "/v1/metrics",
+      "prometheus_scheme": "http"
+    },
+    "checks": [
+      {
+        "http": "http://127.0.0.1:4646/v1/metrics",
+        "interval": "10s",
+        "timeout": "3s"
+      }
+    ]
+  }
+}
+EOFCONSUL
+			
+			# Reload Consul to pick up the new service definition
+			# Use SIGHUP to reload, which is more reliable than 'consul reload'
+			consul reload || pkill -HUP consul || true
 		'';
 	};
 }
