@@ -30,11 +30,11 @@
 			datacenter = clusterConfig.datacenterName;
 			leave_on_interrupt = true;
 			leave_on_terminate = true;
-			
+
 			server = {
 				enabled = false;
 			};
-			
+
 			client = {
 				enabled = true;
 				servers = [clusterConfig.serverIp];
@@ -48,7 +48,7 @@
 					disable_filesystem_isolation = true;
 				};
 			};
-			
+
 			plugin = {
 				raw_exec = {
 					config = {
@@ -62,7 +62,7 @@
 					};
 				};
 			};
-			
+
 			consul = {
 				address = "127.0.0.1:8500";
 				grpc_address = "127.0.0.1:8502";
@@ -93,12 +93,15 @@
 	virtualisation = {
 		docker = {
 			enable = true;
+			daemon.settings = {
+				insecure-registries = [ "docker.l51.net:80" ];
+			};
 		};
 	};
 
 	networking.firewall.allowedTCPPorts = [ 4646 4647 4648 9998 ];
 	networking.firewall.allowedUDPPorts = [ 4648 ];
-	
+
 	# Ensure /var/lib/nomad/config.d exists and is writable
 	# Create it with 1777 permissions (sticky bit + world writable) so any user can write
 	# Also ensure /etc/consul.d exists for service registration
@@ -158,7 +161,7 @@ EOF
 				fi
 				sleep 1
 			done
-			
+
 			# Get the node's IP address from the private network interface
 			# This matches the network used by Nomad (192.168.192.0/24)
 			NODE_IP=$(ip -4 addr show | grep -oP 'inet \K192\.168\.192\.\d+' | head -n1)
@@ -166,7 +169,7 @@ EOF
 				echo "Warning: Could not determine node IP address, service may not be discoverable" >&2
 				NODE_IP=""
 			fi
-			
+
 			# Register Nomad metrics service in Consul
 			# Use explicit IP address so Prometheus can scrape without DNS resolution
 			cat > /etc/consul.d/nomad-metrics.json <<EOFCONSUL
@@ -190,11 +193,10 @@ EOF
   }
 }
 EOFCONSUL
-			
+
 			# Reload Consul to pick up the new service definition
 			# Use SIGHUP to reload, which is more reliable than 'consul reload'
 			consul reload || pkill -HUP consul || true
 		'';
 	};
 }
-
