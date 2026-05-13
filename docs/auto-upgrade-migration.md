@@ -13,31 +13,23 @@ Do the **server first**, then each client in order.
 
 SSH to the node. Then:
 
-1. Drain cleanly. Stopping the services triggers the existing graceful
-   shutdown hooks (Nomad drains, Consul leaves):
-
-   ```sh
-   sudo systemctl stop nomad consul
-   ```
-
-   Wait until allocations have moved off (`nomad node status` from another
-   node if it's a client; instant on the server).
-
-2. Back up the hardware config and clear `/etc/nixos`:
+1. Back up the hardware config and clear `/etc/nixos`. Running services
+   (consul, nomad) are unaffected by removing the directory — they're
+   already loaded:
 
    ```sh
    sudo cp /etc/nixos/hardware-configuration.nix /tmp/hardware-configuration.nix
    sudo rm -rf /etc/nixos
    ```
 
-3. Clone the repo into `/etc/nixos` and restore the hardware config:
+2. Clone the repo into `/etc/nixos` and restore the hardware config:
 
    ```sh
-   sudo git clone https://github.com/stut/nixos-nomad /etc/nixos
+   sudo git clone git@github.com:stut/nixos-nomad.git /etc/nixos
    sudo cp /tmp/hardware-configuration.nix /etc/nixos/hardware-configuration.nix
    ```
 
-4. Write `node.json`. `role` is `server`, `client`, or `hybrid`. `ordinal`
+3. Write `node.json`. `role` is `server`, `client`, or `hybrid`. `ordinal`
    distinguishes clients for staggered upgrade times (server/hybrid: any
    value, conventionally 0; client N: schedules upgrade at `(2+N):00`).
 
@@ -47,27 +39,23 @@ SSH to the node. Then:
    JSON
    ```
 
-5. First apply (this also installs the auto-upgrade timer):
+4. First apply (this installs the auto-upgrade timer and restarts any
+   services whose units changed, triggering their normal drain/leave
+   hooks as part of the restart):
 
    ```sh
    cd /etc/nixos
    sudo nixos-rebuild switch --flake path:.#auto
    ```
 
-6. Confirm the timer is armed:
+5. Confirm the timer is armed:
 
    ```sh
    systemctl list-timers nixos-upgrade.timer
-   systemctl is-enabled nixos-upgrade.service   # should be: enabled
+   systemctl is-enabled nixos-upgrade.service   # should be: linked
    ```
 
-7. Bring services back up if they didn't restart from the rebuild:
-
-   ```sh
-   sudo systemctl start consul nomad
-   ```
-
-8. Clean up the old checkout:
+6. Clean up the old checkout:
 
    ```sh
    rm -rf ~admin/nixos-nomad ~admin/nixos-config

@@ -8,6 +8,7 @@
 
   nix = {
     settings = {
+      download-buffer-size = 524288000;
       system-features = [
         "kvm"
         "big-parallel"

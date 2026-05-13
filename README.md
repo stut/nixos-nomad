@@ -74,7 +74,7 @@ write `node.json`:
 ```sh
 sudo cp /etc/nixos/hardware-configuration.nix /tmp/
 sudo rm -rf /etc/nixos
-sudo git clone https://github.com/<you>/nixos-nomad /etc/nixos
+sudo git clone git@github.com:<you>/nixos-nomad.git /etc/nixos
 sudo cp /tmp/hardware-configuration.nix /etc/nixos/
 sudo $EDITOR /etc/nixos/node.json   # write { "role": "...", "ordinal": N }
 ```
@@ -87,7 +87,10 @@ sudo nixos-rebuild switch --flake path:.#auto
 ```
 
 After this first apply the auto-upgrade timer is armed and the node will
-pull `origin/main` and rebuild on its schedule.
+pull `origin/main` and rebuild on its schedule. Verify with
+`systemctl list-timers nixos-upgrade.timer` — the next fire time should
+match the role/ordinal you set. `systemctl is-enabled nixos-upgrade.service`
+returns `linked` when the timer is active and `masked` while dev mode is on.
 
 ## Auto-upgrade
 
@@ -187,6 +190,8 @@ system.
 
 - [ ] Add a workstation-side `bootstrap.sh` that sets up a fresh node end-to-end
       (subsumes the older "basic `configuration.nix` for installing NixOS" idea)
+- [ ] Run a shared binary cache (`nix-serve`) on the server so clients don't
+      each rebuild Nomad/Consul/kernel from source
 - [ ] Add a default set of infra jobs to run on the cluster (e.g. Prometheus,
       Grafana, Traefik, etc.)
 - [ ] Active failure notification for auto-upgrade (email / ntfy / Slack)
