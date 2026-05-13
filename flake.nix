@@ -4,9 +4,13 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-25.11";
 		consul-cni-flake.url = "github:stut/consul-cni.nix";
+		sops-nix = {
+			url = "github:Mic92/sops-nix";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
   };
 
-  outputs = { self, nixpkgs, consul-cni-flake, ... } @ inputs:
+  outputs = { self, nixpkgs, consul-cni-flake, sops-nix, ... } @ inputs:
     let
       # Configure your cluster here
       clusterConfig = {
@@ -17,6 +21,15 @@
           "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCQ3SV7ef3vQs2C6O3S/Yj88teBWmbGXYNoDmU7+tpyK32Phi4OZjceIZXXoA3+3jhksQCycKLOJtmuLCUw8Q0E="
 					"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDCCHpc5UQlOrcYoqytTzKF4KXjtii322xUCetC/y/yte08P/qh7hMj/A6g/keXClSmYzo/LWEILDpu8F0QOmLC6GV07jre/ELEZSTakqHVrI9Uw2iyaz80z1yqljKZqD4hlGTL4lbmAkpZJCN7W9RSjedI084L7LOoIAoISr6SfOmkGr2dB3vaB2p3Krc/guEMogWYxfmbItMgyQpBaM/ubMPHBDA+RHqqXr3DK9YLq3JZtFN/5wjzokC2aC1mYaoRV35kkG1hFZoZk2PeJUGpXIJxfWheAuCOcM9bKlImJ8UGbn/6DXtpGDIpjuHh1cePhdsi5mnl8rKGbbC4B/Zf"
         ];
+        # Persistent storage via an SMB share on a NAS. Set enable = false
+        # to skip mounting any share — clients will not include cifs-utils
+        # and no secrets will be required.
+        nas = {
+          enable = true;
+          host = "192.168.192.234";
+          share = "nomad-data";
+          mountPoint = "/mnt/nas/vault";
+        };
       };
       # End configuration
 
@@ -36,15 +49,15 @@
       inherit lib;
       nixosConfigurations = {
         hybrid = lib.nixosSystem {
-          modules = [ ./node-types/server ./node-types/client ];
+          modules = [ sops-nix.nixosModules.sops ./node-types/server ./node-types/client ];
           specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
         server = lib.nixosSystem {
-          modules = [ ./node-types/server ];
+          modules = [ sops-nix.nixosModules.sops ./node-types/server ];
           specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
         client = lib.nixosSystem {
-          modules = [ ./node-types/client ];
+          modules = [ sops-nix.nixosModules.sops ./node-types/client ];
           specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
         };
       };

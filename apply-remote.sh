@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-for host in s01 c01 c02 c03; do scp -r * ${host}:nixos-config/; done
+for host in s01 c01 c02 c03; do scp -r * .sops.yaml ${host}:nixos-config/; done
 
 echo
 echo "--------------------------------"

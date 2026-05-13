@@ -5,5 +5,6 @@
 
     ../../services/consul/client
     ../../services/nomad/client
+    ../../services/storage/nas
   ];
 }

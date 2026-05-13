@@ -34,6 +34,13 @@ SSH key happen to match mine.
 Edit `flake.nix` at the top of the output section to customise the datacenter
 name, server IP, SSH port, and to add your public SSH key(s).
 
+If you want persistent storage for jobs via an SMB share on a NAS, configure
+the `nas` block in the same section (host, share name, mount point). Set
+`nas.enable = false` to skip it entirely — the clients will then come up
+without `cifs-utils` and without a credentials secret. See
+[`docs/smb-storage.md`](docs/smb-storage.md) for the model and
+[`docs/sops-nix.md`](docs/sops-nix.md) for credential management.
+
 Then, for each machine:
 
 ### 1. Install NixOS
@@ -74,11 +81,38 @@ And `type` is one of:
 - `client`
 - `hybrid`
 
+### Applying to the whole cluster from your workstation
+
+`apply-remote.sh` is a wrapper that pushes the current working copy of this
+repo to every node and runs `switch.sh` on each in turn. Run it from your
+workstation, not from a node:
+
+```sh
+./apply-remote.sh
+```
+
+It assumes:
+
+- SSH host aliases `s01`, `c01`, `c02`, `c03` in your `~/.ssh/config`
+  (matching one server and three clients). Edit the host list at the top
+  of the script if your topology differs.
+- Each remote already has a `nixos-config/` directory in `~admin` (it's
+  populated on first run; if it doesn't exist yet, `scp` will create it).
+- The remote `admin` user can `sudo nixos-rebuild` without a password,
+  which is the default in this repo's common config.
+
+The script copies all repo files including the `.sops.yaml` dotfile.
+
+The server is switched first, then the clients in order. If a step fails
+the script aborts (`set -e`) so you can investigate without continuing onto
+the next node.
+
 ## What about the hardware config?
 
-By default the `apply.sh` script will use the `hardware-configuration.nix` file
-created by the installer. If you need to customise it you should edit
-`/etc/nixos/hardware-configuration.nix`.
+Both `apply.sh` and `switch.sh` copy each node's own
+`hardware-configuration.nix` from `/etc/nixos/` at run time, so the file is
+never carried between machines. If you need to customise it, edit
+`/etc/nixos/hardware-configuration.nix` on the node itself.
 
 ## Post-installation
 

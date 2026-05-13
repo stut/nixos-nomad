@@ -1,0 +1,17 @@
+keys:
+  - &admin age1sw33jz5502lad0dx5769sephw7ezjw2jdy6dhfhurkpuhwgmuvfscxuxus
+
+  - &host_server1 age1dcacvq47jer5dur35ee2t7yfluwsr8mhp5hy0sldpddun607vpzstnfrct
+  - &host_client1 age1vnckqkm8dmkh98rstjnramvxs0c3mz2t03g3hr2r0g5rdja5advsz7kz9g
+  - &host_client2 age1rq7fe26v2xh5cxy66slgpc8rmyyvu0dsyx7z8w0txcevgql8wvvqa86cau
+  - &host_client3 age1gayrsu2vla63lq6ydfldrgaqkwhzdcy2tazc2xmhnxr4ghqlyqjsxe9yzl
+
+creation_rules:
+  - path_regex: secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_server1
+          - *host_client1
+          - *host_client2
+          - *host_client3
