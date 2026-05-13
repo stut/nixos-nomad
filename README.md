@@ -9,6 +9,13 @@ as well as a cluster with a single server node and one or more clients. Note
 that the cluster setup is the only one that has been well-tested so far as
 that's what I'm running.
 
+> **Fork this repo before using it — do not deploy directly from upstream.**
+> The configuration hardcodes my IP range, SSH public keys, SSH port, NAS
+> address, and host aliases (`s01`, `c01`, `c02`, `c03`). Every node also
+> auto-updates from `origin/main` of whatever fork it was cloned from, so
+> a node pointed at this upstream repo will pull *my* changes on its own
+> schedule. Fork first, point your nodes at your fork.
+
 ## Hosts
 
 Rather than specifying individual hosts in the configuration, the flake
@@ -21,15 +28,19 @@ clients without needing to change the configuration. Consul is configured to
 leave the cluster, and Nomad to drain the node, on a graceful shutdown. Manual
 intervention is required if a node is removed without a graceful shutdown.
 
-If you'd prefer to specify the hostnames in the flake, you can do that by
-modifying the `nixosConfigurations` section in `flake.nix`.
+Each node identifies itself via `/etc/nixos/node.json` (gitignored,
+populated at install time):
+
+```json
+{ "role": "client", "ordinal": 1 }
+```
+
+`role` is `server`, `client`, or `hybrid`. `ordinal` distinguishes clients
+for the staggered auto-upgrade schedule (see below).
 
 ## Usage
 
 ### 0. Fork and customise this repo
-
-You'll want to fork this repo before using it, unless your IP range and public
-SSH key happen to match mine.
 
 Edit `flake.nix` at the top of the output section to customise the datacenter
 name, server IP, SSH port, and to add your public SSH key(s).
@@ -54,65 +65,91 @@ when installing NixOS. You can change this in the flake if you prefer.
 
 If you're setting up a cluster, make sure you setup the server first.
 
-### 2. Clone/copy your fork
+### 2. Bootstrap `/etc/nixos`
 
-I like to put it in `/home/admin/nixos-nomad` but you can put it wherever your
-heart desires.
+The repo lives at `/etc/nixos` as a root-owned git checkout. Preserve the
+installer-generated `hardware-configuration.nix`, clone your fork, then
+write `node.json`:
+
+```sh
+sudo cp /etc/nixos/hardware-configuration.nix /tmp/
+sudo rm -rf /etc/nixos
+sudo git clone https://github.com/<you>/nixos-nomad /etc/nixos
+sudo cp /tmp/hardware-configuration.nix /etc/nixos/
+sudo $EDITOR /etc/nixos/node.json   # write { "role": "...", "ordinal": N }
+```
 
 ### 3. Apply the configuration
 
-The repo contains a script called `apply.sh` which encapsulates the command to
-apply the configuration. You can run it like so:
-
 ```sh
-./apply.sh <operation> <type>
+cd /etc/nixos
+sudo nixos-rebuild switch --flake path:.#auto
 ```
 
-Where `operation` is one of:
+After this first apply the auto-upgrade timer is armed and the node will
+pull `origin/main` and rebuild on its schedule.
 
-- `switch`: applies the configuration immediately
-- `boot`: builds the configuration so it's applied when rebooted
+## Auto-upgrade
 
-Yes, these are passed directly to the `nixos-rebuild` command.
+Every node runs a systemd timer that pulls `origin/main` into `/etc/nixos`
+and runs `nixos-rebuild switch`. Schedule is derived from `node.json`:
 
-And `type` is one of:
+- `server` / `hybrid` → 02:00
+- `client` ordinal N → `(2 + N):00` (e.g. ordinal 1 → 03:00, ordinal 2 → 04:00)
 
-- `server`
-- `client`
-- `hybrid`
+All nodes have a 45-minute randomised delay on top. Setting every client to
+the same ordinal collapses the schedule to "everyone fires in a random
+45-minute window after 03:00."
 
-### Applying to the whole cluster from your workstation
+`allowReboot` is on, so kernel updates trigger a reboot. The existing
+Consul/Nomad graceful-shutdown hooks drain the node first.
 
-`apply-remote.sh` is a wrapper that pushes the current working copy of this
-repo to every node and runs `switch.sh` on each in turn. Run it from your
-workstation, not from a node:
+### Manually triggering an upgrade
 
 ```sh
-./apply-remote.sh
+./trigger-auto-upgrade.sh              # all hosts
+./trigger-auto-upgrade.sh c02 c03      # named hosts
 ```
 
-It assumes:
+### Failure visibility
 
-- SSH host aliases `s01`, `c01`, `c02`, `c03` in your `~/.ssh/config`
-  (matching one server and three clients). Edit the host list at the top
-  of the script if your topology differs.
-- Each remote already has a `nixos-config/` directory in `~admin` (it's
-  populated on first run; if it doesn't exist yet, `scp` will create it).
+A failed auto-upgrade leaves `nixos-upgrade.service` in the systemd `failed`
+state (visible to `node_exporter`'s systemd collector once you wire up
+monitoring) and writes a timestamp to `/var/lib/nixos-nomad/last-upgrade-failed`,
+which is surfaced on shell login until the next successful run.
+
+## Dev mode (testing uncommitted changes)
+
+The auto-upgrade timer would clobber an `scp`'d working tree, so testing
+uncommitted changes requires disabling it cluster-wide first:
+
+```sh
+./dev-mode-on.sh        # masks nixos-upgrade.service on every node
+./apply-remote.sh       # scps the working tree and applies to each node
+# ... iterate, test ...
+./dev-mode-off.sh       # re-enables the timer
+```
+
+`apply-remote.sh` hard-refuses to run unless every target is masked, so you
+can't forget the first step. While dev mode is on, every shell login on a
+node shows a warning so you don't forget the third step.
+
+`apply-remote.sh` assumes:
+
+- SSH host aliases `s01`, `c01`, `c02`, `c03` in your `~/.ssh/config`. Edit
+  the host list at the top of the script if your topology differs.
 - The remote `admin` user can `sudo nixos-rebuild` without a password,
   which is the default in this repo's common config.
 
-The script copies all repo files including the `.sops.yaml` dotfile.
-
 The server is switched first, then the clients in order. If a step fails
-the script aborts (`set -e`) so you can investigate without continuing onto
-the next node.
+the script aborts (`set -e`).
 
 ## What about the hardware config?
 
-Both `apply.sh` and `switch.sh` copy each node's own
-`hardware-configuration.nix` from `/etc/nixos/` at run time, so the file is
-never carried between machines. If you need to customise it, edit
-`/etc/nixos/hardware-configuration.nix` on the node itself.
+`hardware-configuration.nix` lives at `/etc/nixos/hardware-configuration.nix`
+and is gitignored, so it's never carried between machines and survives
+the auto-upgrade `git reset --hard`. `switch.sh` (used in dev mode) copies
+it into the dev tree before each rebuild.
 
 ## Post-installation
 
@@ -139,20 +176,20 @@ Firewalls are disabled on all nodes by default.
 
 ### SSH
 
-In theory, the only reason to access any of the nodes via SSH is to pull and
-apply changes to the configuration. The shell is `bash`, and `vim` is installed
-by default. These can be changed in `node-types/common/default.nix`. If you
-change the shell you may need to modify `apply.sh`.
+In theory, the only reason to access any of the nodes via SSH is to inspect
+state or recover from a failed auto-upgrade. The shell is `bash`, and `vim`
+is installed by default. These can be changed in `node-types/common/default.nix`.
 
 ## TODO
 
 These are in no particular order, and none are necessary to get a working
 system.
 
-- [ ] Add a basic `configuration.nix` to be used when installing NixOS
+- [ ] Add a workstation-side `bootstrap.sh` that sets up a fresh node end-to-end
+      (subsumes the older "basic `configuration.nix` for installing NixOS" idea)
 - [ ] Add a default set of infra jobs to run on the cluster (e.g. Prometheus,
       Grafana, Traefik, etc.)
-- [ ] Add a systemd timer to pull and apply the configuration automatically
+- [ ] Active failure notification for auto-upgrade (email / ntfy / Slack)
 - [ ] Enable the firewall on all nodes without breaking things
 - [ ] Enable encryption for Consul and Nomad gossip
 - [ ] Add support for Vault

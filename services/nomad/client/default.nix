@@ -146,6 +146,31 @@ EOF
 		'';
 	};
 
+	# drain_on_shutdown marks this node ineligible on every restart; clear
+	# the flag after the agent is back up so the node accepts work again.
+	systemd.services.nomad-eligibility = {
+		description = "Mark this Nomad client eligible after start";
+		after = [ "nomad.service" ];
+		requires = [ "nomad.service" ];
+		wantedBy = [ "multi-user.target" ];
+		path = with pkgs; [ nomad ];
+		serviceConfig = {
+			Type = "oneshot";
+			RemainAfterExit = true;
+		};
+		script = ''
+			for i in $(seq 1 60); do
+				if nomad node status -self >/dev/null 2>&1; then
+					nomad node eligibility -self -enable || true
+					exit 0
+				fi
+				sleep 2
+			done
+			echo "Timed out waiting for nomad agent to register" >&2
+			exit 1
+		'';
+	};
+
 	# Separate service to register Nomad metrics in Consul (runs as root)
 	systemd.services.register-nomad-metrics = {
 		description = "Register Nomad metrics service in Consul for Prometheus discovery";

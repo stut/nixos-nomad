@@ -44,21 +44,32 @@
         config.allowUnfree = true;
       });
 			consul-cni = consul-cni-flake.packages.x86_64-linux.consul-cni;
+
+      # Per-host configuration. node.json is gitignored and populated at
+      # install time. Falls back to a hybrid/ordinal-0 default so a fresh
+      # checkout still evaluates (e.g. for `nix flake check`).
+      nodeConfig =
+        if builtins.pathExists ./node.json
+        then builtins.fromJSON (builtins.readFile ./node.json)
+        else { role = "hybrid"; ordinal = 0; };
+
+      roleModules = {
+        server = [ ./node-types/server ];
+        client = [ ./node-types/client ];
+        hybrid = [ ./node-types/server ./node-types/client ];
+      };
+
+      modulesForRole = role:
+        if roleModules ? ${role}
+        then roleModules.${role}
+        else throw "Invalid role in node.json: ${role} (expected server, client, or hybrid)";
     in
     {
       inherit lib;
       nixosConfigurations = {
-        hybrid = lib.nixosSystem {
-          modules = [ sops-nix.nixosModules.sops ./node-types/server ./node-types/client ];
-          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
-        };
-        server = lib.nixosSystem {
-          modules = [ sops-nix.nixosModules.sops ./node-types/server ];
-          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
-        };
-        client = lib.nixosSystem {
-          modules = [ sops-nix.nixosModules.sops ./node-types/client ];
-          specialArgs = { inherit inputs outputs clusterConfig consul-cni; };
+        auto = lib.nixosSystem {
+          modules = [ sops-nix.nixosModules.sops ] ++ (modulesForRole nodeConfig.role);
+          specialArgs = { inherit inputs outputs clusterConfig consul-cni nodeConfig; };
         };
       };
     };
