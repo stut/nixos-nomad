@@ -59,8 +59,13 @@ in
   networking.firewall.allowedUDPPorts = [ 8600 8300 8301 8302 ];
 
   systemd.services.consul = {
-    after = [ "network.target" "generate-node-name.service" ];
+    after = [ "network-online.target" "generate-node-name.service" ];
+    wants = [ "network-online.target" ];
     requires = [ "generate-node-name.service" ];
+    unitConfig = {
+      StartLimitBurst = 10;
+      StartLimitIntervalSec = 120;
+    };
     serviceConfig = {
       Restart = lib.mkForce "always";
     };

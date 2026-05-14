@@ -65,9 +65,13 @@
 	];
 
 	systemd.services.nomad = {
-		after = [ "network.target" "generate-server-node-name.service" "systemd-tmpfiles-setup.service" "consul.service" ];
-		wants = [ "consul.service" ];
+		after = [ "network-online.target" "generate-server-node-name.service" "systemd-tmpfiles-setup.service" "consul.service" ];
+		wants = [ "network-online.target" "consul.service" ];
 		requires = [ "generate-server-node-name.service" ];
+		unitConfig = {
+			StartLimitBurst = 10;
+			StartLimitIntervalSec = 120;
+		};
 		serviceConfig = {
 			Restart = lib.mkForce "always";
 			# Allow writing to /var/lib/nomad for config files
