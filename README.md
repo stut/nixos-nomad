@@ -104,8 +104,8 @@ All nodes have a 45-minute randomised delay on top. Setting every client to
 the same ordinal collapses the schedule to "everyone fires in a random
 45-minute window after 03:00."
 
-`allowReboot` is on, so kernel updates trigger a reboot. The existing
-Consul/Nomad graceful-shutdown hooks drain the node first.
+The `allowReboot` option is on, so kernel updates trigger a reboot. The
+existing Consul/Nomad graceful-shutdown hooks drain the node first.
 
 ### Manually triggering an upgrade
 
