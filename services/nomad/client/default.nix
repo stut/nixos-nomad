@@ -119,8 +119,8 @@
 		wants = [ "network-online.target" "consul.service" ];
 		requires = [ "generate-node-name.service" ];
 		unitConfig = {
-			StartLimitBurst = 10;
-			StartLimitIntervalSec = 120;
+			StartLimitBurst = lib.mkForce 10;
+			StartLimitIntervalSec = lib.mkForce 120;
 		};
 		serviceConfig = {
 			Restart = lib.mkForce "always";
