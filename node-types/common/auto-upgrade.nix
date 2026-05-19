@@ -31,11 +31,21 @@ in
     path = [ pkgs.git ];
     preStart = ''
       cd /etc/nixos
+      # Stash per-host files across `git reset --hard`. They're gitignored
+      # *and* intent-to-add (see below), and reset --hard deletes any path
+      # present in the index — so without this they'd be wiped each run.
+      install -d -m 0700 /var/lib/nixos-nomad/host-files
+      cp -f hardware-configuration.nix /var/lib/nixos-nomad/host-files/
+      cp -f node.json                  /var/lib/nixos-nomad/host-files/
+
       git fetch origin main
       git reset --hard origin/main
+
+      cp -f /var/lib/nixos-nomad/host-files/hardware-configuration.nix .
+      cp -f /var/lib/nixos-nomad/host-files/node.json                  .
+
       # /etc/nixos is a git repo, so `path:` flake ingest filters by
-      # gitignore. hardware-configuration.nix and node.json are gitignored
-      # but required at eval time — mark them intent-to-add so the flake
+      # gitignore. Mark the restored files intent-to-add so the flake
       # source copy includes them without actually committing.
       git add --intent-to-add --force hardware-configuration.nix node.json
     '';
