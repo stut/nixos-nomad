@@ -33,6 +33,11 @@ in
       cd /etc/nixos
       git fetch origin main
       git reset --hard origin/main
+      # /etc/nixos is a git repo, so `path:` flake ingest filters by
+      # gitignore. hardware-configuration.nix and node.json are gitignored
+      # but required at eval time — mark them intent-to-add so the flake
+      # source copy includes them without actually committing.
+      git add --intent-to-add --force hardware-configuration.nix node.json
     '';
     unitConfig.OnFailure = [ "nixos-upgrade-failure.service" ];
   };
