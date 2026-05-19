@@ -121,18 +121,24 @@ in
     "d /var/lib/nixos-nomad 0755 root root - -"
   ];
 
-  # Surface dev-mode and failure state on shell login.
+  # Surface dev-mode and failure state on shell login. Gated to interactive
+  # shells — printing on non-interactive shells (e.g. scp's remote side)
+  # corrupts the protocol with "Received message too long".
   environment.shellInit = ''
-    if [ -e /var/lib/nixos-nomad/dev-mode ]; then
-      echo ""
-      echo "*** DEV MODE: auto-upgrade is masked on this cluster ***"
-      echo ""
-    fi
-    if [ -e /var/lib/nixos-nomad/last-upgrade-failed ]; then
-      echo ""
-      echo "*** Last auto-upgrade FAILED at $(cat /var/lib/nixos-nomad/last-upgrade-failed)"
-      echo "*** See: journalctl -u nixos-upgrade"
-      echo ""
-    fi
+    case $- in
+      *i*)
+        if [ -e /var/lib/nixos-nomad/dev-mode ]; then
+          echo ""
+          echo "*** DEV MODE: auto-upgrade is disabled on this cluster ***"
+          echo ""
+        fi
+        if [ -e /var/lib/nixos-nomad/last-upgrade-failed ]; then
+          echo ""
+          echo "*** Last auto-upgrade FAILED at $(cat /var/lib/nixos-nomad/last-upgrade-failed)"
+          echo "*** See: journalctl -u nixos-upgrade"
+          echo ""
+        fi
+        ;;
+    esac
   '';
 }

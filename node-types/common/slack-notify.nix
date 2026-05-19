@@ -1,9 +1,9 @@
 { pkgs, ... }:
 {
   sops = {
-    defaultSopsFile = ../../secrets/slack.yaml;
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     secrets."slack_webhook_url" = {
+      sopsFile = ../../secrets/slack.yaml;
       mode = "0400";
       owner = "root";
       group = "root";

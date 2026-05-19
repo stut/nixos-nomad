@@ -9,7 +9,6 @@ HOSTS="s01 c01 c02 c03"
 for host in $HOSTS; do
     echo "$host: enabling dev mode"
     ssh "$host" "sudo systemctl stop nixos-upgrade.timer; \
-                 sudo systemctl mask nixos-upgrade.service; \
                  sudo mkdir -p /var/lib/nixos-nomad; \
                  sudo touch /var/lib/nixos-nomad/dev-mode"
 done
