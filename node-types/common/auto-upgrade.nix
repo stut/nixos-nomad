@@ -50,6 +50,10 @@ in
       git add --intent-to-add --force hardware-configuration.nix node.json
     '';
     unitConfig.OnFailure = [ "nixos-upgrade-failure.service" ];
+    # On success, clear the failure marker so the motd stops nagging.
+    serviceConfig.ExecStartPost = pkgs.writeShellScript "clear-upgrade-failure" ''
+      rm -f /var/lib/nixos-nomad/last-upgrade-failed
+    '';
   };
 
   systemd.services.nixos-upgrade-failure = {
