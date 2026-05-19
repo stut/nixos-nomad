@@ -13,6 +13,8 @@ let
     then "0${toString hour}"
     else toString hour;
   schedule = "${hourStr}:00";
+
+  slackNotify = "/etc/nixos-nomad/slack-notify";
 in
 {
   system.autoUpgrade = {
@@ -50,9 +52,24 @@ in
       git add --intent-to-add --force hardware-configuration.nix node.json
     '';
     unitConfig.OnFailure = [ "nixos-upgrade-failure.service" ];
-    # On success, clear the failure marker so the motd stops nagging.
-    serviceConfig.ExecStartPost = pkgs.writeShellScript "clear-upgrade-failure" ''
+    # On success: clear the failure marker, then if the new system needs a
+    # reboot, post a 'rebooting' Slack message and drop a marker that the
+    # post-boot unit will use to confirm the host came back.
+    serviceConfig.ExecStartPost = pkgs.writeShellScript "nixos-upgrade-post" ''
+      set -u
       rm -f /var/lib/nixos-nomad/last-upgrade-failed
+
+      booted="$(readlink -f /run/booted-system 2>/dev/null || true)"
+      current="$(readlink -f /run/current-system 2>/dev/null || true)"
+      if [ -n "$booted" ] && [ -n "$current" ] && [ "$booted" != "$current" ]; then
+        mkdir -p /var/lib/nixos-nomad
+        date -Is > /var/lib/nixos-nomad/pending-reboot-notify
+        ${slackNotify} \
+          --title "Rebooting after auto-upgrade" \
+          --level warn \
+          --body "Booted system differs from new system; allowReboot will reboot shortly." \
+          || true
+      fi
     '';
   };
 
@@ -61,8 +78,41 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = pkgs.writeShellScript "record-upgrade-failure" ''
+        set -u
         mkdir -p /var/lib/nixos-nomad
         date -Is > /var/lib/nixos-nomad/last-upgrade-failed
+
+        ${pkgs.systemd}/bin/journalctl -u nixos-upgrade -n 20 --no-pager \
+          | ${slackNotify} \
+              --title "Auto-upgrade failed" \
+              --level error \
+              --body-stdin \
+          || true
+      '';
+    };
+  };
+
+  # After an upgrade-driven reboot, confirm the host is back. Marker is
+  # written by nixos-upgrade's ExecStartPost just before the reboot.
+  systemd.services.nixos-upgrade-reboot-notify = {
+    description = "Notify Slack after a reboot triggered by auto-upgrade";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "nixos-upgrade-reboot-notify" ''
+        set -u
+        marker=/var/lib/nixos-nomad/pending-reboot-notify
+        if [ ! -e "$marker" ]; then
+          exit 0
+        fi
+        ${slackNotify} \
+          --title "Back up after auto-upgrade" \
+          --level info \
+          --body "Host has returned after the auto-upgrade reboot." \
+          || true
+        rm -f "$marker"
       '';
     };
   };
