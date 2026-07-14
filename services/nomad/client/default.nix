@@ -97,7 +97,7 @@
 		docker = {
 			enable = true;
 			daemon.settings = {
-				insecure-registries = [ "docker.l51.net:80" ];
+				insecure-registries = [ "docker.l51.net:80" "192.168.192.235:5000" ];
 			};
 		};
 	};
