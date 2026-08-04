@@ -37,6 +37,9 @@
 
 			client = {
 				enabled = true;
+				# Targeting tag: jobs constrain on `${node.class}` == "home" to
+				# pin to this cluster.
+				node_class = clusterConfig.nodeClass;
 				servers = [clusterConfig.serverIp];
 				drain_on_shutdown = {
 					deadline           = "5m";

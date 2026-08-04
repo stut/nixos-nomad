@@ -15,6 +15,10 @@
       # Configure your cluster here
       clusterConfig = {
         datacenterName = "home";
+        # Nomad client node class — the targeting tag for job constraints
+        # (`${node.class}`). Clients carry "home" so jobs can pin to this
+        # cluster (vs. the off-home "cloud" cluster).
+        nodeClass = "home";
         serverIp = "192.168.192.10";
         sshPort = 64242;
         sshPublicKeys = [
