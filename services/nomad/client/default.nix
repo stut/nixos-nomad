@@ -62,6 +62,16 @@
 				docker = {
 					config = {
 						allow_privileged = true;
+						# Nomad's default capability allowlist plus net_admin and
+						# net_raw, which Home Assistant's Bluetooth integration
+						# needs. Setting allow_caps replaces the default, so the
+						# default entries are repeated here.
+						allow_caps = [
+							"audit_write" "chown" "dac_override" "fowner" "fsetid"
+							"kill" "mknod" "net_bind_service" "setfcap" "setgid"
+							"setpcap" "setuid" "sys_chroot"
+							"net_admin" "net_raw"
+						];
 						volumes = {
 							enabled = true;
 						};
