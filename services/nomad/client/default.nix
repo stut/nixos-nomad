@@ -163,8 +163,10 @@ EOF
 		'';
 	};
 
-	# drain_on_shutdown marks this node ineligible on every restart; clear
-	# the flag after the agent is back up so the node accepts work again.
+	# drain_on_shutdown drains this node and marks it ineligible on every
+	# restart. If the drain outlives systemd's stop timeout the agent comes
+	# back still draining, and eligibility cannot be set on a draining
+	# node, so cancel the drain: that restores eligibility as well.
 	systemd.services.nomad-eligibility = {
 		description = "Mark this Nomad client eligible after start";
 		after = [ "nomad.service" ];
@@ -178,7 +180,7 @@ EOF
 		script = ''
 			for i in $(seq 1 60); do
 				if nomad node status -self >/dev/null 2>&1; then
-					nomad node eligibility -self -enable || true
+					nomad node drain -self -disable -yes || true
 					exit 0
 				fi
 				sleep 2
